@@ -88,6 +88,8 @@ def side_val(block, side, field):
 
 def draftkings_odds(comp):
     for o in comp.get("odds") or []:
+        if not isinstance(o, dict):
+            continue
         prov = o.get("provider") or {}
         if str(prov.get("id")) == DK or "draft" in str(prov.get("name", "")).lower():
             return o
