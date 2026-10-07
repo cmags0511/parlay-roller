@@ -198,6 +198,9 @@ main .in{padding-block:18px 48px;display:flex;flex-direction:column;gap:14px}
 </div></main>
 
 <script>
+function showErr(m){var e=document.getElementById('status');if(e){e.style.display='';e.textContent='Something went wrong: '+m}}
+window.addEventListener('error',function(ev){showErr(ev.message)});
+window.addEventListener('unhandledrejection',function(ev){showErr(String(ev.reason))});
 const LABEL={pyd:"Passing yards",cmp:"Completions",att:"Pass attempts",ptd:"Passing TDs",ryd:"Rushing yards",car:"Rush attempts",rec:"Receptions",recyd:"Receiving yards",rry:"Rush + Rec yards",pts:"Points",reb:"Rebounds",ast:"Assists","3pm":"3-pointers made",pra:"Pts + Reb + Ast",pr:"Pts + Reb",pa:"Pts + Ast",ra:"Reb + Ast",fgm:"Field goals made",pat:"Extra points made",kpts:"Kicking points",tkl:"Tackles + assists",sck:"Sacks",dint:"Interceptions"};
 const SHORT={pyd:"Pass yds",cmp:"Completions",att:"Pass att",ptd:"Pass TDs",ryd:"Rush yds",car:"Rush att",rec:"Receptions",recyd:"Rec yds",rry:"Rush+Rec yds",pts:"Points",reb:"Rebounds",ast:"Assists","3pm":"Threes",pra:"PRA",pr:"Pts+Reb",pa:"Pts+Ast",ra:"Reb+Ast",fgm:"FG made",pat:"XP made",kpts:"Kick pts",tkl:"Tkl+Ast",sck:"Sacks",dint:"INTs"};
 const STAT={rry:g=>g.ryd+g.recyd,kpts:g=>3*g.fgm+g.pat,pra:g=>g.pts+g.reb+g.ast,pr:g=>g.pts+g.reb,pa:g=>g.pts+g.ast,ra:g=>g.reb+g.ast};

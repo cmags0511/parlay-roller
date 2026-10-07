@@ -16,7 +16,7 @@ Field events with no head-to-head matchup (golf and racing outrights) are not co
 
 Usage: python fetch_extra.py [extra_lines.json]
 """
-import json, os, re, sys, time, datetime as dt
+import json, os, re, sys, time, traceback, datetime as dt
 import urllib.request, urllib.error
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "extra_lines.json"
@@ -223,20 +223,25 @@ def main():
         time.sleep(0.1)
         return cache[k]
 
-    leagues = discover(lcache, log)
-    print(f"{len(leagues)} leagues across {len({v['sport'] for v in leagues.values()})} sports")
+    try:
+        leagues = discover(lcache, log)
+    except Exception as ex:
+        log(f"discover: {type(ex).__name__}: {ex}")
+        leagues = {}
     scanned = with_odds = 0
-    for lk, info in sorted(leagues.items()):
+    print(f"{len(leagues)} leagues across {len({v['sport'] for v in leagues.values()})} sports")
+    def handle(lk, info):
+        nonlocal scanned, with_odds
         sport, slug = info["sport"], info["slug"]
         key = KEYMAP.get(slug, slug)
         prev = lcache.get(lk, {})
         if prev.get("skip_until") and now.isoformat() < prev["skip_until"]:
-            continue
+            return
         if time.time() - started > BUDGET:
             log("time budget reached; remaining leagues checked next run")
             if key in (old.get("leagues") or {}):
                 out["leagues"][key] = old["leagues"][key]
-            continue
+            return
         extra_qs = "&groups=80&limit=400" if slug == "college-football" else ""
         base = f"{SITE}/{sport}/{slug}/scoreboard"
         events, seen, name = [], set(), prev.get("name") or slug
@@ -260,7 +265,7 @@ def main():
             log(f"{lk} scoreboard: {e}")
             if key in (old.get("leagues") or {}):
                 out["leagues"][key] = old["leagues"][key]
-            continue
+            return
         time.sleep(0.1)
         games, teams, pre_comps = [], {}, []
         for ev in events:
@@ -278,10 +283,10 @@ def main():
                         games.append(g)
         if not events:
             lcache[lk] = {"name": name, "sport": sport, "skip_until": (now + dt.timedelta(hours=DORMANT_HOURS)).isoformat(timespec="minutes")}
-            continue
+            return
         if not games:
             lcache[lk] = {"name": name, "sport": sport, "skip_until": (now + dt.timedelta(hours=NO_ODDS_HOURS)).isoformat(timespec="minutes")}
-            continue
+            return
         lcache[lk] = {"name": name, "sport": sport}
         props = []
         if key not in PROPS_ELSEWHERE:
@@ -331,6 +336,21 @@ def main():
         with_odds += 1
         print(f"{key}: {len(games)} games with DK odds, {len(props)} player props")
         log(f"{key}: {len(events)} events, {len(games)} with odds, {len(props)} props")
+
+    done = 0
+    for lk, info in sorted(leagues.items()):
+        key = KEYMAP.get(info["slug"], info["slug"])
+        try:
+            handle(lk, info)
+        except Exception as ex:  # one odd league must never sink the whole run
+            tb = traceback.extract_tb(ex.__traceback__)[-1]
+            msg = f"{lk}: {type(ex).__name__}: {ex} (fetch_extra.py line {tb.lineno})"
+            print(msg); log(msg)
+            if key in (old.get("leagues") or {}):
+                out["leagues"][key] = old["leagues"][key]
+        done += 1
+        if done % 50 == 0:
+            print(f"... {done}/{len(leagues)} leagues checked, {with_odds} with DraftKings odds")
     if not scanned and not out["leagues"]:
         print("ESPN unreachable; keeping previous extra_lines.json")
         old["log"] = out["log"]
