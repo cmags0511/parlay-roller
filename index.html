@@ -109,7 +109,7 @@ main .in{padding-block:18px 48px;display:flex;flex-direction:column;gap:14px}
 .num{font:700 1.5rem/1 var(--f-display);color:var(--muted);width:22px;text-align:center;padding-top:2px}
 .who{min-width:0}
 .nm{font-weight:600;font-size:15px;line-height:1.25}
-.lg{font:700 10px var(--f-body);letter-spacing:.06em;color:var(--accent);margin-left:6px}
+.lg{font:700 10px var(--f-body);letter-spacing:.06em;color:var(--accent);margin-left:6px;text-transform:uppercase}
 .gm{font-size:12.5px;color:var(--muted)}
 .bet{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
 .side{font:700 11px var(--f-body);letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
@@ -127,13 +127,6 @@ main .in{padding-block:18px 48px;display:flex;flex-direction:column;gap:14px}
 .ib:hover{border-color:var(--accent);color:var(--accent)}
 .ib[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .ib svg{width:17px;height:17px}
-.flag{grid-column:2 / -1;margin-top:6px;font-size:12.5px;color:var(--ink);background:var(--bg);border-radius:8px;padding:7px 10px}
-.flag summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:center}
-.flag summary::-webkit-details-marker{display:none}
-.flag .tagf{font:700 10px var(--f-body);letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;flex:none}
-.flag .tagf.caution{color:var(--warn);background:var(--warn-soft)}
-.flag .tagf.support{color:var(--hit);background:var(--hit-soft)}
-.flag p{margin:6px 0 0;color:var(--ink2)}
 
 .out{display:flex;flex-wrap:wrap;gap:8px}
 .out button,.out a{flex:1 1 150px;text-align:center;text-decoration:none;border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:10px;padding:11px 14px;font:600 13.5px var(--f-body);cursor:pointer}
@@ -177,19 +170,18 @@ main .in{padding-block:18px 48px;display:flex;flex-direction:column;gap:14px}
         <div class="seg" id="modeseg" role="group" aria-labelledby="lbl-mode">
           <button type="button" data-mode="random" aria-pressed="false">Chaos</button>
           <button type="button" data-mode="lean" aria-pressed="true">Lean on data</button>
-          <button type="button" data-mode="top" aria-pressed="false">Top picks</button>
         </div></div>
     </div>
     <p class="help" id="modehelp"></p>
     <div class="row">
       <label class="chk"><input type="checkbox" id="onegame"> One leg per game</label>
-      <label class="chk"><input type="checkbox" id="nocaution"> Skip legs flagged caution</label>
       <label class="chk" id="minwrap">Min last-10 hit rate (props with history)
         <select id="minhit" aria-label="Minimum last 10 hit rate"><option value="0">Any</option><option value="0.6">60%+</option><option value="0.7">70%+</option><option value="0.8">80%+</option></select></label>
     </div>
-    <div id="lgwrap"><div class="lbl" id="lbl-lg">Sport / league</div><div class="pills" id="lgseg" role="group" aria-labelledby="lbl-lg"></div></div>
+    <div id="sportwrap"><div class="lbl" id="lbl-sp">Sport</div><div class="pills" id="sportseg" role="group" aria-labelledby="lbl-sp"></div></div>
+    <div id="lgwrap" hidden><div class="lbl" id="lbl-lg">League</div><div class="pills" id="lgseg" role="group" aria-labelledby="lbl-lg"></div></div>
     <div><div class="lbl" id="lbl-mk">Bets (none selected = all)</div><div class="pills" id="mkpills" role="group" aria-labelledby="lbl-mk"></div></div>
-    <div><div class="lbl" id="lbl-gm">Games (tap to include or leave out)</div><div class="pills games" id="gmpills" role="group" aria-labelledby="lbl-gm"></div></div>
+    <div><div class="lbl" id="lbl-gm">Games (tap to include or leave out)</div><p class="help" id="gmhelp" hidden></p><div class="pills games" id="gmpills" role="group" aria-labelledby="lbl-gm"></div></div>
   </div>
 </div></header>
 
@@ -218,9 +210,12 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const $=id=>document.getElementById(id);
 const jget=f=>fetch(f,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
 
-let POOL=[], PICKMAP=new Map(), NOTES={}, LINES=null;
-const LGNAME={NFL:"NFL",NBA:"NBA",CFB:"College football"}, LGFIRST=["NFL","NBA","CFB","MLB","NHL"];
-let CFG={n:4,mode:"lean",league:"ALL",kind:"all",onegame:false,nocaution:false,minhit:0,stake:10};
+let POOL=[], LINES=null;
+const LGNAME={NFL:"NFL",NBA:"NBA",CFB:"College football"}, LGSPORT={NFL:"football",NBA:"basketball",CFB:"football"}, LGFIRST=["NFL","NBA","CFB","mlb","nhl"];
+const SPORTNAME={football:"Football",basketball:"Basketball",baseball:"Baseball",hockey:"Hockey",soccer:"Soccer",tennis:"Tennis",mma:"MMA / UFC",golf:"Golf",racing:"Racing",rugby:"Rugby","rugby-league":"Rugby league",cricket:"Cricket",lacrosse:"Lacrosse",volleyball:"Volleyball","field-hockey":"Field hockey","water-polo":"Water polo","australian-football":"Aussie rules"};
+const SPORTFIRST=["football","basketball","baseball","hockey","soccer","tennis","mma"];
+const spName=k=>SPORTNAME[k]||k.replace(/(^|-)(\w)/g,(m,a,b)=>(a?" ":"")+b.toUpperCase());
+let CFG={n:4,mode:"lean",league:"ALL",sport:"ALL",kind:"all",onegame:false,minhit:0,stake:10};
 try{Object.assign(CFG,JSON.parse(localStorage.getItem("prCfg")||"{}"))}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem("prCfg",JSON.stringify(CFG))}catch(e){}};
 let MARKETS=new Set(), GAMES_OFF=new Set(), LEGS=[], CUSTOM_ODDS="";
@@ -246,11 +241,11 @@ function buildPool(lg,meta,L){
       const sh=a=>(a.filter(v=>v>line).length+1)/(a.length+2);
       const pOver=.45*sh(l10)+.35*(cur.length>=3?sh(cur):sh(vals))+.2*sh(l5);
       const home=game.home===p.t;
-      out.push({kind:"prop",hist:true,key:`${lg}|${p.id}|${mid}`,xk:`${lg}|${p.id}`,lg,pid:p.id,name:p.n,team:p.t,pos:p.p,opp:home?game.away:game.home,home,t:game.t,
+      out.push({kind:"prop",hist:true,sport:lg==="NBA"?"basketball":"football",key:`${lg}|${p.id}|${mid}`,xk:`${lg}|${p.id}`,lg,pid:p.id,name:p.n,team:p.t,pos:p.p,opp:home?game.away:game.home,home,t:game.t,
         gk:gameKey(lg,game.away,game.home,game.t),gl:`${game.away} @ ${game.home}`,
         market:mid,label:LABEL[mid],short:SHORT[mid]||LABEL[mid],line,open:dk.open,pOver,n10:l10.length,
         over10:l10.filter(v=>v>line).length,under10:l10.filter(v=>v<line).length,
-        avg10:l10.reduce((a,b)=>a+b,0)/l10.length,note:null});
+        avg10:l10.reduce((a,b)=>a+b,0)/l10.length});
     }
   }
   return out;
@@ -270,7 +265,7 @@ function buildExtra(extra){
     for(const g of L.games||[]){
       const t=new Date(g.t);if(!(t.getTime()>now))continue;
       const gk=gameKey(lg,g.away,g.home,t),o=g.odds||{};
-      const base={kind:"game",hist:false,lg,pid:null,t,gk,gl:`${g.away} @ ${g.home}`,xk:"G|"+gk,leagueName:L.name,open:null};
+      const base={kind:"game",hist:false,sport:L.sport||"other",lg,pid:null,t,gk,gl:`${g.away} @ ${g.home}`,xk:"G|"+gk,leagueName:L.name,open:null};
       const gname=s=>s==="away"?(g.awayName||g.away):(g.homeName||g.home),gabb=s=>s==="away"?g.away:g.home;
       if(o.ml){const [pa,ph]=pair(o.ml.away,o.ml.home);
         for(const [s,p] of [["away",pa],["home",ph]])out.push({...base,key:`${gk}|ml|${s}`,market:"ml",label:"Moneyline",short:"Moneyline",side:s,team:gabb(s),name:gname(s),line:null,price:o.ml[s],p});}
@@ -282,8 +277,8 @@ function buildExtra(extra){
     for(const r of L.props||[]){
       const t=new Date(r.t);if(!r.away||!r.home||!(t.getTime()>now)||typeof r.line!=="number")continue;
       const home=r.team===r.home,mk="x:"+r.label.toLowerCase();
-      out.push({kind:"xprop",hist:false,key:`${lg}|${r.aid}|${mk}`,xk:`${lg}|${r.aid}`,lg,pid:r.aid,name:r.name,team:r.team||"",pos:r.pos,opp:home?r.away:r.home,home,t,
-        gk:gameKey(lg,r.away,r.home,t),gl:`${r.away} @ ${r.home}`,market:mk,label:r.label,short:r.label,line:r.line,open:r.open,pOver:.5,n10:0,over10:0,under10:0,avg10:null,price:null,note:null,leagueName:L.name});
+      out.push({kind:"xprop",hist:false,sport:L.sport||"other",key:`${lg}|${r.aid}|${mk}`,xk:`${lg}|${r.aid}`,lg,pid:r.aid,name:r.name,team:r.team||"",pos:r.pos,opp:home?r.away:r.home,home,t,
+        gk:gameKey(lg,r.away,r.home,t),gl:`${r.away} @ ${r.home}`,market:mk,label:r.label,short:r.label,line:r.line,open:r.open,pOver:.5,n10:0,over10:0,under10:0,avg10:null,price:null,leagueName:L.name});
     }
   }
   return out;
@@ -293,6 +288,7 @@ function buildExtra(extra){
 function eligible(taken){
   const used=new Set(taken.map(l=>l.c.xk)),games=new Set(taken.map(l=>l.c.gk));
   return POOL.filter(c=>{
+    if(CFG.sport!=="ALL"&&c.sport!==CFG.sport)return false;
     if(CFG.league!=="ALL"&&c.lg!==CFG.league)return false;
     if(CFG.kind==="props"&&c.kind==="game")return false;
     if(CFG.kind==="games"&&c.kind!=="game")return false;
@@ -300,8 +296,6 @@ function eligible(taken){
     if(GAMES_OFF.has(c.gk))return false;
     if(used.has(c.xk))return false;
     if(CFG.onegame&&games.has(c.gk))return false;
-    if(CFG.nocaution&&c.note&&c.note.flag==="caution")return false;
-    if(CFG.mode==="top"&&!PICKMAP.has(c.key))return false;
     if(CFG.mode==="lean"&&CFG.minhit&&!(c.hist&&sideRate(c,c.pOver>=.5?"over":"under")>=CFG.minhit))return false;
     return true;
   });
@@ -314,20 +308,14 @@ function pickWeighted(items,wf){
 }
 function drawOne(taken){
   let pool=eligible(taken);
-  if(CFG.league==="ALL"&&CFG.mode!=="top"){
-    // pick a sport first so NFL's thousands of props don't drown out every other sport
-    const by={};pool.forEach(c=>(by[c.lg]=by[c.lg]||[]).push(c));
-    const ks=Object.keys(by);if(ks.length)pool=by[ks[Math.floor(Math.random()*ks.length)]];
-  }
+  // pick a sport, then a league, before a bet so no one sport (hundreds of soccer matches, NFL props) drowns out the rest
+  const sample=(arr,key)=>{const by={};arr.forEach(c=>(by[c[key]]=by[c[key]]||[]).push(c));const ks=Object.keys(by);return ks.length?by[ks[Math.floor(Math.random()*ks.length)]]:arr};
+  if(CFG.sport==="ALL")pool=sample(pool,"sport");
+  if(CFG.league==="ALL")pool=sample(pool,"lg");
   if(CFG.mode==="random"){
     if(!pool.length)return null;
     const c=pool[Math.floor(Math.random()*pool.length)];
     return{c,side:c.kind==="game"?c.side:Math.random()<.5?"over":"under",locked:false};
-  }
-  if(CFG.mode==="top"){
-    if(!pool.length)return null;
-    const c=pickWeighted(pool,c=>Math.max(PICKMAP.get(c.key).score,.05));
-    return{c,side:PICKMAP.get(c.key).side,locked:false};
   }
   // lean: take the better side of each prop, then favor strong hit rates
   const cand=pool.map(c=>({c,side:c.kind==="game"?c.side:!c.hist?(Math.random()<.5?"over":"under"):c.pOver>=.5?"over":"under"})).filter(x=>!CFG.minhit||(x.c.hist&&sideRate(x.c,x.side)>=CFG.minhit));
@@ -383,7 +371,6 @@ function legHtml(l,i){
   const gm=isGame?(c.market==="total"?esc(when(c.t)):`${esc(c.gl)} · ${esc(when(c.t))}`):`${esc(c.team)} ${c.home?"vs":"@"} ${esc(c.opp)} · ${esc(when(c.t))}`;
   const stats=c.hist?`<span class="${cls}">L10 ${sideHits(c,l.side)}/${c.n10}</span><span>Avg ${c.avg10.toFixed(1)}</span>`
     :isGame?`<span>Implied ${Math.round(c.p*100)}%</span>`:`<span>No hit-rate history</span>`;
-  const nt=c.note&&c.note.note?`<details class="flag"><summary><span class="tagf ${esc(c.note.flag||"")}">${esc(c.note.flag==="support"?"News: supports":c.note.flag==="caution"?"News: caution":"News")}</span><span>Daily news check</span></summary><p>${esc(c.note.note)}</p></details>`:"";
   return`<li class="leg ${l.locked?"locked":""}" style="--i:${i}">
     <div class="num">${i+1}</div>
     <div class="who"><div class="nm">${esc(c.name)}<span class="lg">${esc(c.lg)}</span></div>
@@ -394,7 +381,7 @@ function legHtml(l,i){
     <div class="acts">
       <button class="ib" type="button" data-act="lock" data-i="${i}" aria-pressed="${l.locked}" aria-label="${l.locked?"Unlock":"Lock"} leg ${i+1}" title="Lock this leg">${ICON.lock}</button>
       <button class="ib" type="button" data-act="redo" data-i="${i}" aria-label="Re-roll leg ${i+1}" title="Re-roll this leg">${ICON.redo}</button>
-    </div>${nt}</li>`;
+    </div></li>`;
 }
 function render(animate){
   const res=$("result");
@@ -428,26 +415,41 @@ function toast(msg,link){
   t.innerHTML=esc(msg)+(link?` <a href="${link.href}">${esc(link.text)}</a>`:"");
   document.body.appendChild(t);setTimeout(()=>t.remove(),link?4500:2400);
 }
-const MODEHELP={random:"Pure luck: any bet in the pool. Props get a coin-flip over or under; game bets pick a random side.",lean:"Random bets, but props take the side with the better recent hit rate and game bets lean toward the book's favorite. Stronger edges are more likely to be drawn.",top:"Draws only from the app's ranked daily picks (NFL, NBA and college football props), so legs start with the best data edge."};
+const MODEHELP={random:"Pure luck: any bet in the pool. Props get a coin-flip over or under; game bets pick a random side.",lean:"Random bets, but props take the side with the better recent hit rate and game bets lean toward the book's favorite. Stronger edges are more likely to be drawn."};
 function syncControls(){
   $("legs-n").textContent=CFG.n;$("dec").disabled=CFG.n<=2;$("inc").disabled=CFG.n>=10;
   document.querySelectorAll("#kindseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.kind===CFG.kind));
   document.querySelectorAll("#modeseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===CFG.mode));
   document.querySelectorAll("#lgseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lg===CFG.league));
+  document.querySelectorAll("#sportseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.sp===CFG.sport));
   $("modehelp").textContent=MODEHELP[CFG.mode];
-  $("onegame").checked=CFG.onegame;$("nocaution").checked=CFG.nocaution;$("minhit").value=String(CFG.minhit);
+  $("onegame").checked=CFG.onegame;$("minhit").value=String(CFG.minhit);
   $("minwrap").hidden=CFG.mode!=="lean";
 }
 function buildPills(){
-  const inLg=POOL.filter(c=>CFG.league==="ALL"||c.lg===CFG.league);
-  const mkName=new Map();inLg.forEach(c=>{if(!mkName.has(c.market))mkName.set(c.market,c.short||c.label)});
-  const GB=["ml","spread","total"],sk=m=>(GB.includes(m)?"0":"1")+mkName.get(m).toLowerCase();
+  // league row: only when a sport with more than one league is chosen
+  const inSport=POOL.filter(c=>CFG.sport==="ALL"||c.sport===CFG.sport);
+  const cnt={};inSport.forEach(c=>cnt[c.lg]=(cnt[c.lg]||0)+1);
+  const lgs=Object.keys(cnt).sort((a,b)=>{const pa=LGFIRST.indexOf(a),pb=LGFIRST.indexOf(b);return(pa<0?99:pa)-(pb<0?99:pb)||cnt[b]-cnt[a]});
+  const showLg=CFG.sport!=="ALL"&&lgs.length>1;
+  $("lgwrap").hidden=!showLg;
+  if(!showLg)CFG.league="ALL";else if(CFG.league!=="ALL"&&!lgs.includes(CFG.league))CFG.league="ALL";
+  $("lgseg").innerHTML=showLg?["ALL",...lgs].map(l=>`<button type="button" data-lg="${esc(l)}" aria-pressed="${l===CFG.league}">${l==="ALL"?"All "+esc(spName(CFG.sport)):esc(LGNAME[l]||l)}</button>`).join(""):"";
+  // bet and game rows follow the current scope
+  const inLg=inSport.filter(c=>CFG.league==="ALL"||c.lg===CFG.league);
+  const GB=["ml","spread","total"];
+  const scoped=CFG.sport==="ALL"?inLg.filter(c=>GB.includes(c.market)):inLg;
+  const mkName=new Map();scoped.forEach(c=>{if(!mkName.has(c.market))mkName.set(c.market,c.short||c.label)});
+  const sk=m=>(GB.includes(m)?"0":"1")+mkName.get(m).toLowerCase();
   const mk=[...mkName.keys()].sort((a,b)=>sk(a).localeCompare(sk(b)));
   MARKETS=new Set([...MARKETS].filter(m=>mk.includes(m)));
   $("mkpills").innerHTML=mk.map(m=>`<button type="button" data-mk="${esc(m)}" aria-pressed="${MARKETS.has(m)}">${esc(mkName.get(m))}</button>`).join("");
+  $("lbl-mk").textContent=CFG.sport==="ALL"?"Bet types (pick a sport to filter its props)":"Bets (none selected = all)";
   const gm=new Map();inLg.forEach(c=>gm.set(c.gk,c));
   const gl=[...gm.values()].sort((a,b)=>a.t-b.t);
-  $("gmpills").innerHTML=gl.map(c=>`<button type="button" data-gk="${esc(c.gk)}" aria-pressed="${!GAMES_OFF.has(c.gk)}">${esc(c.gl)} · ${esc(c.t.toLocaleDateString("en-US",{weekday:"short"}))}</button>`).join("");
+  const many=gl.length>60;
+  $("gmhelp").hidden=!many;$("gmhelp").textContent=many?`${gl.length} games in scope. Pick a sport or league to choose games.`:"";
+  $("gmpills").innerHTML=many?"":gl.map(c=>`<button type="button" data-gk="${esc(c.gk)}" aria-pressed="${!GAMES_OFF.has(c.gk)}">${esc(c.gl)} \u00b7 ${esc(c.t.toLocaleDateString("en-US",{weekday:"short"}))}</button>`).join("");
 }
 function updateChips(){
   const n=eligible([]).length;
@@ -458,9 +460,9 @@ function wire(){
   $("inc").onclick=()=>{CFG.n=Math.min(10,CFG.n+1);saveCfg();syncControls()};
   $("modeseg").onclick=e=>{const b=e.target.closest("button");if(!b)return;CFG.mode=b.dataset.mode;saveCfg();syncControls();updateChips()};
   $("kindseg").onclick=e=>{const b=e.target.closest("button");if(!b)return;CFG.kind=b.dataset.kind;saveCfg();syncControls();updateChips()};
-  $("lgseg").onclick=e=>{const b=e.target.closest("button");if(!b)return;CFG.league=b.dataset.lg;saveCfg();LEGS=[];MARKETS.clear();GAMES_OFF.clear();syncControls();buildPills();updateChips();render()};
+  $("sportseg").onclick=e=>{const b=e.target.closest("button");if(!b)return;CFG.sport=b.dataset.sp;CFG.league="ALL";saveCfg();LEGS=[];MARKETS.clear();GAMES_OFF.clear();buildPills();syncControls();updateChips();render()};
+  $("lgseg").onclick=e=>{const b=e.target.closest("button");if(!b)return;CFG.league=b.dataset.lg;saveCfg();LEGS=[];MARKETS.clear();GAMES_OFF.clear();buildPills();syncControls();updateChips();render()};
   $("onegame").onchange=e=>{CFG.onegame=e.target.checked;saveCfg();updateChips()};
-  $("nocaution").onchange=e=>{CFG.nocaution=e.target.checked;saveCfg();updateChips()};
   $("minhit").onchange=e=>{CFG.minhit=parseFloat(e.target.value)||0;saveCfg()};
   $("mkpills").onclick=e=>{const b=e.target.closest("button");if(!b)return;const m=b.dataset.mk;MARKETS.has(m)?MARKETS.delete(m):MARKETS.add(m);b.setAttribute("aria-pressed",MARKETS.has(m));updateChips()};
   $("gmpills").onclick=e=>{const b=e.target.closest("button");if(!b)return;const k=b.dataset.gk;GAMES_OFF.has(k)?GAMES_OFF.delete(k):GAMES_OFF.add(k);b.setAttribute("aria-pressed",!GAMES_OFF.has(k));updateChips()};
@@ -518,10 +520,10 @@ function fallbackCopy(txt,done){
 
 /* ---------- load ---------- */
 (async function init(){
-  const [raw,lines,picks,notes,extra]=await Promise.all([jget("props_data.json"),jget("lines.json"),jget("picks.json"),jget("notes.json"),jget("extra_lines.json")]);
+  const [raw,lines,extra]=await Promise.all([jget("props_data.json"),jget("lines.json"),jget("extra_lines.json")]);
   const status=$("status");
   if(!(raw&&lines)&&!extra){status.innerHTML="<b>Couldn't load the data</b>Reload the page to try again.";return}
-  LINES=lines||extra;NOTES=(notes&&notes.notes)||{};
+  LINES=lines||extra;
   const built=[];
   if(raw&&lines){
     for(const lg of ["NFL","NBA"]){if(raw[lg]&&lines[lg]&&Object.keys(lines[lg]).length)built.push(...buildPool(lg,raw[lg],lines[lg]))}
@@ -535,28 +537,23 @@ function fallbackCopy(txt,done){
     built.push(...buildExtra(extra));
   }
   POOL=built;
-  POOL.forEach(c=>{c.note=NOTES[c.key]||null});
-  if(picks){
-    const all=[...(picks.picks||[]),...Object.values(picks.byMarket||{}).flat()];
-    all.forEach(p=>{if(!PICKMAP.has(p.key))PICKMAP.set(p.key,{side:p.side,score:p.score||0})});
-  }
   if(!POOL.length){
     status.innerHTML="<b>No lines posted yet</b>There are no upcoming games with DraftKings lines right now. Check back closer to kickoff.";
     $("srcnote").textContent="Lines refresh every few hours when games are on the board.";
     return;
   }
-  const cnt={};POOL.forEach(c=>cnt[c.lg]=(cnt[c.lg]||0)+1);
-  const lgs=Object.keys(cnt).sort((a,b)=>{const pa=LGFIRST.indexOf(a),pb=LGFIRST.indexOf(b);return(pa<0?99:pa)-(pb<0?99:pb)||cnt[b]-cnt[a]});
-  if(lgs.length>1){
-    $("lgseg").innerHTML=["ALL",...lgs].map(l=>`<button type="button" data-lg="${l}" aria-pressed="false">${l==="ALL"?"All sports":esc(LGNAME[l]||l)}</button>`).join("");
-    if(CFG.league!=="ALL"&&!lgs.includes(CFG.league))CFG.league="ALL";
-  }else{$("lgwrap").hidden=true;CFG.league="ALL"}
-  if(CFG.mode==="top"&&!POOL.some(c=>PICKMAP.has(c.key)))CFG.mode="lean";
+  const spc={};POOL.forEach(c=>spc[c.sport]=(spc[c.sport]||0)+1);
+  const sports=Object.keys(spc).sort((a,b)=>{const pa=SPORTFIRST.indexOf(a),pb=SPORTFIRST.indexOf(b);return(pa<0?99:pa)-(pb<0?99:pb)||spc[b]-spc[a]});
+  if(CFG.sport!=="ALL"&&!sports.includes(CFG.sport))CFG.sport="ALL";
+  if(sports.length>1){
+    $("sportseg").innerHTML=["ALL",...sports].map(k=>`<button type="button" data-sp="${esc(k)}" aria-pressed="false">${k==="ALL"?"All sports":esc(spName(k))}</button>`).join("");
+  }else{$("sportwrap").hidden=true;CFG.sport="ALL"}
+  if(CFG.mode!=="random"&&CFG.mode!=="lean")CFG.mode="lean";
   const hasGame=POOL.some(c=>c.kind==="game"),hasProp=POOL.some(c=>c.kind!=="game");
   $("kindwrap").hidden=!(hasGame&&hasProp);if(!(hasGame&&hasProp))CFG.kind="all";
   if(CFG.kind==="games"&&!hasGame||CFG.kind==="props"&&!hasProp)CFG.kind="all";
   status.hidden=true;$("app").hidden=false;$("ctl").hidden=false;
-  syncControls();buildPills();updateChips();wire();renderSaved();$("nocaution").closest("label").hidden=!Object.keys(NOTES).length;
+  syncControls();buildPills();updateChips();wire();renderSaved();
   $("srcnote").textContent="Lines are DraftKings numbers pulled through ESPN and can move after they load. Game bets show DraftKings prices; player props have a line but no price here, so those legs count as -110 unless you enter your own odds. Check the sportsbook before betting.";
   rollAll();
 })();

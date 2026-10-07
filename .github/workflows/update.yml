@@ -30,14 +30,11 @@ jobs:
       - name: College football game logs (ESPN box scores)
         run: python build_cfb.py cfb_data.json
         continue-on-error: true
-      - name: Rank top picks
-        run: python picks.py picks.json
-        continue-on-error: true
       - name: Commit if changed
         run: |
           git config user.name "parlay-roller-bot"
           git config user.email "parlay-roller-bot@users.noreply.github.com"
-          git add props_data.json $(ls lines.json picks.json cfb_data.json cfb_games.json.gz extra_lines.json extra_athletes.json 2>/dev/null)
+          git add props_data.json $(ls lines.json cfb_data.json cfb_games.json.gz extra_lines.json extra_athletes.json extra_leagues.json 2>/dev/null)
           git diff --cached --quiet || git commit -m "Update data $(date -u +'%Y-%m-%d %H:%M UTC')"
           git pull --rebase -X theirs origin main || true
           git push
