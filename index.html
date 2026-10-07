@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1a2b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Parlay Roller">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="description" content="Roll a random parlay from live DraftKings lines across every sport: game bets with real prices and player props, with hit rates where game logs exist.">
+<title>Parlay Roller</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#eef1f6; --panel:#ffffff; --ink:#132033; --ink2:#46566e; --muted:#7a889e;
+  --line:#e1e6ee; --line2:#cfd7e3; --accent:#2563eb; --accent-soft:#e7eefd; --on-accent:#ffffff;
+  --band:#0f1a2b; --band-ink:#eef3fb; --band-muted:#8fa0ba; --band-line:#22314a; --band-field:#18253a;
+  --hit:#178a4f; --hit-soft:#dcf2e5; --miss:#c23838; --miss-soft:#fbe3e3; --warn:#9a5b00; --warn-soft:#fcefd8;
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b111b; --panel:#131b28; --ink:#e7ecf4; --ink2:#a9b5c8; --muted:#76849a;
+  --line:#1f2a3c; --line2:#2b3a52; --accent:#6c9cf5; --accent-soft:#1a2842; --on-accent:#0b111b;
+  --band:#070c14; --band-ink:#eef3fb; --band-muted:#7f90a9; --band-line:#1c2940; --band-field:#111b2b;
+  --hit:#4cc285; --hit-soft:#14301f; --miss:#ee6e6e; --miss-soft:#36191d; --warn:#f0b45a; --warn-soft:#3a2a12; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+html,button,input,select,label,a{touch-action:manipulation}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--f-body);margin:0;-webkit-tap-highlight-color:transparent}
+button{font-family:var(--f-body)}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:600px){input,select{font-size:16px!important}}
+.in{max-width:760px;margin:0 auto}
+
+/* band */
+.band{background:var(--band);color:var(--band-ink);padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));border-bottom:3px solid var(--accent)}
+.band .in{padding-block:18px;display:flex;flex-direction:column;gap:14px}
+.toprow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.eyebrow{font:700 1.05rem var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--band-muted)}
+.back{color:var(--band-muted);text-decoration:none;font:600 12.5px var(--f-body);border:1px solid var(--band-line);background:var(--band-field);border-radius:999px;padding:6px 12px;white-space:nowrap}
+.back:hover{color:var(--band-ink);border-color:var(--accent)}
+h1{font:700 2.4rem/.95 var(--f-display);letter-spacing:.03em;margin:0;text-transform:uppercase}
+h1 span{color:var(--accent)}
+.tag{color:var(--band-muted);margin:6px 0 0;font-size:13.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 11px var(--f-mono);color:var(--band-muted);border:1px solid var(--band-line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.chip b{color:var(--band-ink);font-weight:600}
+@media (max-width:600px){h1{font-size:2rem}.tag{font-size:13px}}
+
+/* controls */
+.ctl{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.lbl{font:600 10.5px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--band-muted)}
+.seg{display:inline-flex;background:var(--band-field);border:1px solid var(--band-line);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:none;color:var(--band-muted);font:700 15px var(--f-display);letter-spacing:.06em;padding:5px 14px;border-radius:6px;cursor:pointer;text-transform:uppercase}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.stepper{display:inline-flex;align-items:center;background:var(--band-field);border:1px solid var(--band-line);border-radius:8px;overflow:hidden}
+.stepper button{border:0;background:none;color:var(--accent);font:700 20px/1 var(--f-body);width:40px;height:38px;cursor:pointer}
+.stepper button:disabled{opacity:.35;cursor:default}
+.stepper output{min-width:34px;text-align:center;font:600 16px var(--f-mono);color:var(--band-ink)}
+.chk{display:inline-flex;align-items:center;gap:7px;color:var(--band-muted);font-size:13px;cursor:pointer}
+.chk input{accent-color:var(--accent);width:16px;height:16px}
+.band select{font:500 13px var(--f-body);color:var(--band-ink);background:var(--band-field);border:1px solid var(--band-line);border-radius:8px;padding:7px 10px}
+.pills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:2px 16px;-webkit-overflow-scrolling:touch}
+.pills::-webkit-scrollbar{display:none}
+.pills button{flex:none;border:1px solid var(--band-line);background:var(--band-field);color:var(--band-muted);font:600 12.5px var(--f-body);padding:7px 13px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.pills button:hover{color:var(--band-ink);border-color:var(--accent)}
+.pills button[aria-pressed="true"]{background:var(--band-ink);border-color:var(--band-ink);color:var(--band)}
+.pills.games button[aria-pressed="false"]{opacity:.55}
+.help{margin:0;font-size:12.5px;color:var(--band-muted)}
+
+/* main */
+main{padding:0 16px}
+main .in{padding-block:18px 48px;display:flex;flex-direction:column;gap:14px}
+.rollbar{display:flex;gap:10px;align-items:stretch}
+.roll{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:12px;background:var(--accent);color:var(--on-accent);font:700 1.35rem/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:16px;cursor:pointer;box-shadow:0 2px 0 rgb(0 0 0 / .12)}
+.roll:active{transform:translateY(1px)}
+.roll svg{width:22px;height:22px}
+.roll:disabled{opacity:.5;cursor:default}
+.ghost{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:12px;font:600 13px var(--f-body);padding:0 16px;cursor:pointer}
+.ghost:hover{border-color:var(--accent)}
+.ghost:disabled{opacity:.45;cursor:default}
+
+.sum{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sum .k{font:600 10.5px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sum .v{font:600 1.35rem/1.2 var(--f-mono);color:var(--ink)}
+.sum .s{font-size:11.5px;color:var(--muted)}
+.sum .v.good{color:var(--hit)}
+@media (max-width:480px){.sum .v{font-size:1.1rem}}
+.pay{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;border-top:1px solid var(--line);padding-top:12px;color:var(--ink2);font-size:13px}
+.pay label{display:inline-flex;align-items:center;gap:6px}
+.pay input{width:84px;font:600 14px var(--f-mono);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;background:var(--bg);color:var(--ink);text-align:right}
+.pay .win{margin-left:auto;font:600 14px var(--f-mono);color:var(--ink)}
+.pay .win b{color:var(--hit)}
+
+.legs{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.leg{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:start;animation:drop .38s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*70ms)}
+.leg.locked{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+@keyframes drop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.leg{animation:none}}
+.num{font:700 1.5rem/1 var(--f-display);color:var(--muted);width:22px;text-align:center;padding-top:2px}
+.who{min-width:0}
+.nm{font-weight:600;font-size:15px;line-height:1.25}
+.lg{font:700 10px var(--f-body);letter-spacing:.06em;color:var(--accent);margin-left:6px}
+.gm{font-size:12.5px;color:var(--muted)}
+.bet{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.side{font:700 11px var(--f-body);letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+.side.over{color:var(--hit);background:var(--hit-soft)}
+.side.under{color:var(--miss);background:var(--miss-soft)}
+.side.ml{color:var(--accent);background:var(--accent-soft)}
+.lgn{font:500 11.5px var(--f-body);color:var(--muted);margin-left:6px}
+.what{font:600 15px var(--f-mono)}
+.meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.meta span{font:500 11px var(--f-mono);color:var(--ink2);background:var(--bg);border-radius:5px;padding:2px 7px}
+.meta .h{color:var(--hit)}
+.meta .c{color:var(--miss)}
+.acts{display:flex;flex-direction:column;gap:6px}
+.ib{border:1px solid var(--line2);background:var(--panel);color:var(--ink2);border-radius:8px;width:38px;height:34px;display:grid;place-items:center;cursor:pointer;padding:0}
+.ib:hover{border-color:var(--accent);color:var(--accent)}
+.ib[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.ib svg{width:17px;height:17px}
+.flag{grid-column:2 / -1;margin-top:6px;font-size:12.5px;color:var(--ink);background:var(--bg);border-radius:8px;padding:7px 10px}
+.flag summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:center}
+.flag summary::-webkit-details-marker{display:none}
+.flag .tagf{font:700 10px var(--f-body);letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;flex:none}
+.flag .tagf.caution{color:var(--warn);background:var(--warn-soft)}
+.flag .tagf.support{color:var(--hit);background:var(--hit-soft)}
+.flag p{margin:6px 0 0;color:var(--ink2)}
+
+.out{display:flex;flex-wrap:wrap;gap:8px}
+.out button,.out a{flex:1 1 150px;text-align:center;text-decoration:none;border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:10px;padding:11px 14px;font:600 13.5px var(--f-body);cursor:pointer}
+.out .primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.out button:hover,.out a:hover{border-color:var(--accent)}
+.empty{background:var(--panel);border:1px dashed var(--line2);border-radius:12px;padding:28px 18px;text-align:center;color:var(--ink2)}
+.empty b{display:block;font:700 1.2rem var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-bottom:4px}
+.sh{font:700 1.1rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:6px 0 8px}
+.sv{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.sv summary{cursor:pointer;display:flex;gap:10px;align-items:center}
+.sv .mono{font-family:var(--f-mono)}.sv .when{margin-left:auto;color:var(--muted);font-size:12px}
+.sv pre{white-space:pre-wrap;font:12.5px/1.5 var(--f-mono);color:var(--ink2);margin:10px 0}
+.svb{display:flex;gap:8px}.svb button{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 14px;font:600 13px var(--f-body);cursor:pointer}
+.note{font-size:12px;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13px;z-index:50;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px)}
+.toast a{color:var(--bg);font-weight:700}
+</style>
+</head>
+<body>
+<header class="band"><div class="in">
+  <div class="toprow">
+    <span class="eyebrow">Parlay Roller</span>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div>
+    <h1>Random <span>parlay</span></h1>
+    <p class="tag">Roll a parlay from live DraftKings lines across every sport. Player props show hit rates where the app has game logs.</p>
+  </div>
+
+  <div class="ctl" id="ctl" hidden>
+    <div class="row">
+      <div><div class="lbl" id="lbl-legs">Legs</div>
+        <div class="stepper" role="group" aria-labelledby="lbl-legs"><button type="button" id="dec" aria-label="Fewer legs">&minus;</button><output id="legs-n" aria-live="polite">4</output><button type="button" id="inc" aria-label="More legs">+</button></div></div>
+      <div id="kindwrap"><div class="lbl" id="lbl-kind">Bet type</div>
+        <div class="seg" id="kindseg" role="group" aria-labelledby="lbl-kind">
+          <button type="button" data-kind="all" aria-pressed="true">All</button>
+          <button type="button" data-kind="props" aria-pressed="false">Props</button>
+          <button type="button" data-kind="games" aria-pressed="false">Games</button>
+        </div></div>
+      <div><div class="lbl" id="lbl-mode">Pick style</div>
+        <div class="seg" id="modeseg" role="group" aria-labelledby="lbl-mode">
+          <button type="button" data-mode="random" aria-pressed="false">Chaos</button>
+          <button type="button" data-mode="lean" aria-pressed="true">Lean on data</button>
+          <button type="button" data-mode="top" aria-pressed="false">Top picks</button>
+        </div></div>
+    </div>
+    <p class="help" id="modehelp"></p>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="onegame"> One leg per game</label>
+      <label class="chk"><input type="checkbox" id="nocaution"> Skip legs flagged caution</label>
+      <label class="chk" id="minwrap">Min last-10 hit rate (props with history)
+        <select id="minhit" aria-label="Minimum last 10 hit rate"><option value="0">Any</option><option value="0.6">60%+</option><option value="0.7">70%+</option><option value="0.8">80%+</option></select></label>
+    </div>
+    <div id="lgwrap"><div class="lbl" id="lbl-lg">Sport / league</div><div class="pills" id="lgseg" role="group" aria-labelledby="lbl-lg"></div></div>
+    <div><div class="lbl" id="lbl-mk">Bets (none selected = all)</div><div class="pills" id="mkpills" role="group" aria-labelledby="lbl-mk"></div></div>
+    <div><div class="lbl" id="lbl-gm">Games (tap to include or leave out)</div><div class="pills games" id="gmpills" role="group" aria-labelledby="lbl-gm"></div></div>
+  </div>
+</div></header>
+
+<main><div class="in">
+  <div id="status" class="empty">Loading lines and game logs&hellip;</div>
+  <div id="app" hidden>
+    <div class="rollbar">
+      <button type="button" class="roll" id="roll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/></svg><span id="rolltxt">Roll parlay</span></button>
+    </div>
+    <div id="result" style="display:flex;flex-direction:column;gap:14px;margin-top:14px"></div>
+  </div>
+  <div id="saved"></div>
+  <p class="note" id="srcnote"></p>
+</div></main>
+
+<script>
+const LABEL={pyd:"Passing yards",cmp:"Completions",att:"Pass attempts",ptd:"Passing TDs",ryd:"Rushing yards",car:"Rush attempts",rec:"Receptions",recyd:"Receiving yards",rry:"Rush + Rec yards",pts:"Points",reb:"Rebounds",ast:"Assists","3pm":"3-pointers made",pra:"Pts + Reb + Ast",pr:"Pts + Reb",pa:"Pts + Ast",ra:"Reb + Ast",fgm:"Field goals made",pat:"Extra points made",kpts:"Kicking points",tkl:"Tackles + assists",sck:"Sacks",dint:"Interceptions"};
+const SHORT={pyd:"Pass yds",cmp:"Completions",att:"Pass att",ptd:"Pass TDs",ryd:"Rush yds",car:"Rush att",rec:"Receptions",recyd:"Rec yds",rry:"Rush+Rec yds",pts:"Points",reb:"Rebounds",ast:"Assists","3pm":"Threes",pra:"PRA",pr:"Pts+Reb",pa:"Pts+Ast",ra:"Reb+Ast",fgm:"FG made",pat:"XP made",kpts:"Kick pts",tkl:"Tkl+Ast",sck:"Sacks",dint:"INTs"};
+const STAT={rry:g=>g.ryd+g.recyd,kpts:g=>3*g.fgm+g.pat,pra:g=>g.pts+g.reb+g.ast,pr:g=>g.pts+g.reb,pa:g=>g.pts+g.ast,ra:g=>g.reb+g.ast};
+const stat=(g,m)=>STAT[m]?STAT[m](g):g[m];
+const LEGDEC=1+100/110; // every leg priced at -110, same as the main app when no odds are entered
+const amToDec=a=>a>0?1+a/100:1+100/-a;
+const decToAm=d=>d>=2?"+"+Math.round((d-1)*100):"-"+Math.round(100/(d-1));
+const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(1);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $=id=>document.getElementById(id);
+const jget=f=>fetch(f,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
+
+let POOL=[], PICKMAP=new Map(), NOTES={}, LINES=null;
+const LGNAME={NFL:"NFL",NBA:"NBA",CFB:"College football"}, LGFIRST=["NFL","NBA","CFB","MLB","NHL"];
+let CFG={n:4,mode:"lean",league:"ALL",kind:"all",onegame:false,nocaution:false,minhit:0,stake:10};
+try{Object.assign(CFG,JSON.parse(localStorage.getItem("prCfg")||"{}"))}catch(e){}
+const saveCfg=()=>{try{localStorage.setItem("prCfg",JSON.stringify(CFG))}catch(e){}};
+let MARKETS=new Set(), GAMES_OFF=new Set(), LEGS=[], CUSTOM_ODDS="";
+
+/* ---------- build the pool of bettable props (one per player + market) ---------- */
+function buildPool(lg,meta,L){
+  const cols=meta.cols,now=Date.now(),out=[];
+  const ups=(meta.upcoming||[]).map(u=>({t:new Date(u[0]),away:u[1],home:u[2]})).filter(u=>u.t.getTime()>now).sort((a,b)=>a.t-b.t);
+  const minG=lg==="CFB"?5:8;
+  for(const p of meta.players){
+    const e=L[p.e||p.id];if(!e)continue;
+    const game=ups.find(u=>u.away===p.t||u.home===p.t);if(!game)continue;
+    let games=null;
+    for(const [mid,dk] of Object.entries(e)){
+      if(!LABEL[mid]||typeof dk.line!=="number")continue;
+      // skip a line that belongs to a different game than the player's next one
+      if(dk.d&&Math.abs(new Date(dk.d)-game.t)>12*3600e3)continue;
+      if(!games)games=p.g.map(r=>{const o={};cols.forEach((c,i)=>o[c]=r[i]);return o});
+      const vals=games.map(g=>stat(g,mid)).filter(v=>typeof v==="number"&&isFinite(v));
+      if(vals.length<minG)continue;
+      const line=dk.line,l10=vals.slice(-10),l5=vals.slice(-5);
+      const cur=games.filter(g=>g.date>=meta.curStart).map(g=>stat(g,mid)).filter(v=>typeof v==="number"&&isFinite(v));
+      const sh=a=>(a.filter(v=>v>line).length+1)/(a.length+2);
+      const pOver=.45*sh(l10)+.35*(cur.length>=3?sh(cur):sh(vals))+.2*sh(l5);
+      const home=game.home===p.t;
+      out.push({kind:"prop",hist:true,key:`${lg}|${p.id}|${mid}`,xk:`${lg}|${p.id}`,lg,pid:p.id,name:p.n,team:p.t,pos:p.p,opp:home?game.away:game.home,home,t:game.t,
+        gk:gameKey(lg,game.away,game.home,game.t),gl:`${game.away} @ ${game.home}`,
+        market:mid,label:LABEL[mid],short:SHORT[mid]||LABEL[mid],line,open:dk.open,pOver,n10:l10.length,
+        over10:l10.filter(v=>v>line).length,under10:l10.filter(v=>v<line).length,
+        avg10:l10.reduce((a,b)=>a+b,0)/l10.length,note:null});
+    }
+  }
+  return out;
+}
+const gameKey=(lg,away,home,t)=>`${lg}|${away}@${home}|${t.toISOString().slice(0,10)}`;
+const impl=a=>a==null?null:a>0?100/(a+100):-a/(-a+100); // American price -> implied probability
+const sideP=(c,s)=>c.kind==="game"?c.p:s==="over"?c.pOver:1-c.pOver;
+const sideHits=(c,s)=>s==="over"?c.over10:c.under10;
+const sideRate=(c,s)=>c.hist?sideHits(c,s)/c.n10:null;
+const legDec=l=>l.c.price!=null?amToDec(l.c.price):LEGDEC;
+
+/* ---------- bets from other sports (extra_lines.json) ---------- */
+function buildExtra(extra){
+  const out=[],now=Date.now();
+  const pair=(a,b)=>{const ia=impl(a),ib=impl(b);if(ia==null||ib==null)return[.5,.5];const s=ia+ib;return[ia/s,ib/s]};
+  for(const [lg,L] of Object.entries(extra.leagues||{})){
+    for(const g of L.games||[]){
+      const t=new Date(g.t);if(!(t.getTime()>now))continue;
+      const gk=gameKey(lg,g.away,g.home,t),o=g.odds||{};
+      const base={kind:"game",hist:false,lg,pid:null,t,gk,gl:`${g.away} @ ${g.home}`,xk:"G|"+gk,leagueName:L.name,open:null};
+      const gname=s=>s==="away"?(g.awayName||g.away):(g.homeName||g.home),gabb=s=>s==="away"?g.away:g.home;
+      if(o.ml){const [pa,ph]=pair(o.ml.away,o.ml.home);
+        for(const [s,p] of [["away",pa],["home",ph]])out.push({...base,key:`${gk}|ml|${s}`,market:"ml",label:"Moneyline",short:"Moneyline",side:s,team:gabb(s),name:gname(s),line:null,price:o.ml[s],p});}
+      if(o.spread&&o.spread.away&&o.spread.home){const [pa,ph]=pair(o.spread.away.price,o.spread.home.price);
+        for(const [s,p] of [["away",pa],["home",ph]])out.push({...base,key:`${gk}|spread|${s}`,market:"spread",label:"Spread",short:"Spread",side:s,team:gabb(s),name:gname(s),line:o.spread[s].line,price:o.spread[s].price,p});}
+      if(o.total){const [po,pu]=pair(o.total.over,o.total.under);
+        for(const [s,p] of [["over",po],["under",pu]])out.push({...base,key:`${gk}|total|${s}`,market:"total",label:"Total",short:"Total",side:s,team:"",name:`${g.away} @ ${g.home}`,line:o.total.line,price:o.total[s],p});}
+    }
+    for(const r of L.props||[]){
+      const t=new Date(r.t);if(!r.away||!r.home||!(t.getTime()>now)||typeof r.line!=="number")continue;
+      const home=r.team===r.home,mk="x:"+r.label.toLowerCase();
+      out.push({kind:"xprop",hist:false,key:`${lg}|${r.aid}|${mk}`,xk:`${lg}|${r.aid}`,lg,pid:r.aid,name:r.name,team:r.team||"",pos:r.pos,opp:home?r.away:r.home,home,t,
+        gk:gameKey(lg,r.away,r.home,t),gl:`${r.away} @ ${r.home}`,market:mk,label:r.label,short:r.label,line:r.line,open:r.open,pOver:.5,n10:0,over10:0,under10:0,avg10:null,price:null,note:null,leagueName:L.name});
+    }
+  }
+  return out;
+}
+
+/* ---------- drawing legs ---------- */
+function eligible(taken){
+  const used=new Set(taken.map(l=>l.c.xk)),games=new Set(taken.map(l=>l.c.gk));
+  return POOL.filter(c=>{
+    if(CFG.league!=="ALL"&&c.lg!==CFG.league)return false;
+    if(CFG.kind==="props"&&c.kind==="game")return false;
+    if(CFG.kind==="games"&&c.kind!=="game")return false;
+    if(MARKETS.size&&!MARKETS.has(c.market))return false;
+    if(GAMES_OFF.has(c.gk))return false;
+    if(used.has(c.xk))return false;
+    if(CFG.onegame&&games.has(c.gk))return false;
+    if(CFG.nocaution&&c.note&&c.note.flag==="caution")return false;
+    if(CFG.mode==="top"&&!PICKMAP.has(c.key))return false;
+    if(CFG.mode==="lean"&&CFG.minhit&&!(c.hist&&sideRate(c,c.pOver>=.5?"over":"under")>=CFG.minhit))return false;
+    return true;
+  });
+}
+function pickWeighted(items,wf){
+  const w=items.map(wf),tot=w.reduce((a,b)=>a+b,0);
+  let r=Math.random()*tot;
+  for(let i=0;i<items.length;i++){r-=w[i];if(r<=0)return items[i]}
+  return items[items.length-1];
+}
+function drawOne(taken){
+  let pool=eligible(taken);
+  if(CFG.league==="ALL"&&CFG.mode!=="top"){
+    // pick a sport first so NFL's thousands of props don't drown out every other sport
+    const by={};pool.forEach(c=>(by[c.lg]=by[c.lg]||[]).push(c));
+    const ks=Object.keys(by);if(ks.length)pool=by[ks[Math.floor(Math.random()*ks.length)]];
+  }
+  if(CFG.mode==="random"){
+    if(!pool.length)return null;
+    const c=pool[Math.floor(Math.random()*pool.length)];
+    return{c,side:c.kind==="game"?c.side:Math.random()<.5?"over":"under",locked:false};
+  }
+  if(CFG.mode==="top"){
+    if(!pool.length)return null;
+    const c=pickWeighted(pool,c=>Math.max(PICKMAP.get(c.key).score,.05));
+    return{c,side:PICKMAP.get(c.key).side,locked:false};
+  }
+  // lean: take the better side of each prop, then favor strong hit rates
+  const cand=pool.map(c=>({c,side:c.kind==="game"?c.side:!c.hist?(Math.random()<.5?"over":"under"):c.pOver>=.5?"over":"under"})).filter(x=>!CFG.minhit||(x.c.hist&&sideRate(x.c,x.side)>=CFG.minhit));
+  if(!cand.length)return null;
+  const x=pickWeighted(cand,x=>Math.exp(6*(sideP(x.c,x.side)-.5)));
+  return{c:x.c,side:x.side,locked:false};
+}
+function rollAll(){
+  const keep=LEGS.filter(l=>l.locked),legs=[...keep];
+  let tries=0;
+  while(legs.length<CFG.n&&tries++<CFG.n*4){
+    const l=drawOne(legs);if(!l)break;legs.push(l);
+  }
+  // keep the order the games kick off so the slip reads naturally
+  LEGS=legs.sort((a,b)=>a.c.t-b.c.t);
+  render(true);
+  if(legs.length<CFG.n)toast(legs.length?`Only ${legs.length} legs fit these filters`:"Nothing matches those filters");
+}
+function rerollOne(i){
+  const others=LEGS.filter((_,j)=>j!==i),l=drawOne(others);
+  if(!l){toast("No other props fit these filters");return}
+  LEGS[i]=l;LEGS.sort((a,b)=>a.c.t-b.c.t);render(true);
+}
+
+/* ---------- rendering ---------- */
+const ICON={lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+ redo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>'};
+const when=d=>d.toLocaleDateString("en-US",{weekday:"short"})+" "+d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+function legEst(){
+  const n=LEGS.length;
+  const custom=parseFloat(String(CUSTOM_ODDS).replace(/[^\d+-.]/g,""));
+  const est=LEGS.reduce((a,l)=>a*legDec(l),1);
+  const dec=isFinite(custom)&&Math.abs(custom)>=100?amToDec(custom):est;
+  const chance=LEGS.reduce((a,l)=>a*sideP(l.c,l.side),1);
+  const priced=LEGS.filter(l=>l.c.price!=null).length;
+  return{dec,est,chance,priced,n,custom:isFinite(custom)&&Math.abs(custom)>=100};
+}
+const sgn=v=>v==null?"":(v>0?"+":"")+v;
+function betLine(l){
+  const c=l.c;
+  if(c.kind==="game"){
+    if(c.market==="ml")return`ML ${sgn(c.price)}`;
+    if(c.market==="spread")return`${sgn(c.line)}${c.price!=null?` (${sgn(c.price)})`:""}`;
+    return`${fmt(c.line)} Total${c.price!=null?` (${sgn(c.price)})`:""}`;
+  }
+  return`${fmt(c.line)} ${c.short||c.label}`;
+}
+function legHtml(l,i){
+  const c=l.c,r=sideRate(c,l.side),cls=r==null?"":r>=.7?"h":r<=.4?"c":"";
+  const move=c.open!=null&&c.open!==c.line?`<span>${c.line>c.open?"↑":"↓"} from ${fmt(c.open)}</span>`:"";
+  const isGame=c.kind==="game",pill=isGame?(c.market==="total"?l.side:c.market==="ml"?"Moneyline":"Spread"):l.side;
+  const pillCls=isGame?(c.market==="total"?l.side:"ml"):l.side;
+  const gm=isGame?(c.market==="total"?esc(when(c.t)):`${esc(c.gl)} · ${esc(when(c.t))}`):`${esc(c.team)} ${c.home?"vs":"@"} ${esc(c.opp)} · ${esc(when(c.t))}`;
+  const stats=c.hist?`<span class="${cls}">L10 ${sideHits(c,l.side)}/${c.n10}</span><span>Avg ${c.avg10.toFixed(1)}</span>`
+    :isGame?`<span>Implied ${Math.round(c.p*100)}%</span>`:`<span>No hit-rate history</span>`;
+  const nt=c.note&&c.note.note?`<details class="flag"><summary><span class="tagf ${esc(c.note.flag||"")}">${esc(c.note.flag==="support"?"News: supports":c.note.flag==="caution"?"News: caution":"News")}</span><span>Daily news check</span></summary><p>${esc(c.note.note)}</p></details>`:"";
+  return`<li class="leg ${l.locked?"locked":""}" style="--i:${i}">
+    <div class="num">${i+1}</div>
+    <div class="who"><div class="nm">${esc(c.name)}<span class="lg">${esc(c.lg)}</span></div>
+      <div class="gm">${gm}</div>
+      <div class="bet"><span class="side ${pillCls}">${esc(pill)}</span><span class="what">${esc(betLine(l))}</span></div>
+      <div class="meta">${stats}${move}</div>
+    </div>
+    <div class="acts">
+      <button class="ib" type="button" data-act="lock" data-i="${i}" aria-pressed="${l.locked}" aria-label="${l.locked?"Unlock":"Lock"} leg ${i+1}" title="Lock this leg">${ICON.lock}</button>
+      <button class="ib" type="button" data-act="redo" data-i="${i}" aria-label="Re-roll leg ${i+1}" title="Re-roll this leg">${ICON.redo}</button>
+    </div>${nt}</li>`;
+}
+function render(animate){
+  const res=$("result");
+  $("rolltxt").textContent=LEGS.length?"Re-roll"+(LEGS.some(l=>l.locked)?" unlocked legs":" parlay"):"Roll parlay";
+  if(!LEGS.length){res.innerHTML="";return}
+  const e=legEst(),stake=Math.max(0,parseFloat(CFG.stake)||0),ret=stake*e.dec;
+  res.innerHTML=`
+   <section class="sum" aria-label="Parlay summary">
+     <div><div class="k">Legs</div><div class="v">${LEGS.length}</div><div class="s">${new Set(LEGS.map(l=>l.c.gk)).size} game${new Set(LEGS.map(l=>l.c.gk)).size===1?"":"s"}</div></div>
+     <div><div class="k">${e.custom?"Your odds":"Est. odds"}</div><div class="v">${e.custom?(parseFloat(CUSTOM_ODDS)>0?"+":"")+parseFloat(CUSTOM_ODDS):decToAm(e.dec)}</div><div class="s">${e.custom?"entered":e.priced===e.n?"book prices":e.priced?`${e.priced} book price${e.priced===1?"":"s"}, rest -110`:"-110 per leg"}</div></div>
+     <div><div class="k">Chance all hit</div><div class="v">${(e.chance*100).toFixed(e.chance<.1?1:0)}%</div><div class="s">rough estimate</div></div>
+     <div class="pay">
+       <label>Stake $<input id="stake" inputmode="decimal" value="${esc(CFG.stake)}" aria-label="Stake in dollars"></label>
+       <label>Odds <input id="codds" inputmode="text" placeholder="${decToAm(e.est)}" value="${esc(CUSTOM_ODDS)}" aria-label="Parlay odds, optional"></label>
+       <span class="win">Pays <b>$${ret.toFixed(2)}</b></span>
+     </div>
+   </section>
+   <ol class="legs">${LEGS.map(legHtml).join("")}</ol>
+   <div class="out">
+     <button type="button" class="primary" id="savep">Save parlay</button>
+     <button type="button" id="copy">Copy as text</button>
+   </div>
+   <p class="note">Chance all hit uses each player's recent hit rate where there is history, the de-vigged book price for game bets, and 50% for props with no history. It treats legs as independent. Parlays carry a built-in sportsbook edge, so this is for fun. Not betting advice.</p>`;
+  if(!animate)res.querySelectorAll(".leg").forEach(x=>x.style.animation="none");
+}
+
+/* ---------- controls ---------- */
+function toast(msg,link){
+  document.querySelectorAll(".toast").forEach(x=>x.remove());
+  const t=document.createElement("div");t.className="toast";t.setAttribute("role","status");
+  t.innerHTML=esc(msg)+(link?` <a href="${link.href}">${esc(link.text)}</a>`:"");
+  document.body.appendChild(t);setTimeout(()=>t.remove(),link?4500:2400);
+}
+const MODEHELP={random:"Pure luck: any bet in the pool. Props get a coin-flip over or under; game bets pick a random side.",lean:"Random bets, but props take the side with the better recent hit rate and game bets lean toward the book's favorite. Stronger edges are more likely to be drawn.",top:"Draws only from the app's ranked daily picks (NFL, NBA and college football props), so legs start with the best data edge."};
+function syncControls(){
+  $("legs-n").textContent=CFG.n;$("dec").disabled=CFG.n<=2;$("inc").disabled=CFG.n>=10;
+  document.querySelectorAll("#kindseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.kind===CFG.kind));
+  document.querySelectorAll("#modeseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===CFG.mode));
+  document.querySelectorAll("#lgseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lg===CFG.league));
+  $("modehelp").textContent=MODEHELP[CFG.mode];
+  $("onegame").checked=CFG.onegame;$("nocaution").checked=CFG.nocaution;$("minhit").value=String(CFG.minhit);
+  $("minwrap").hidden=CFG.mode!=="lean";
+}
+function buildPills(){
+  const inLg=POOL.filter(c=>CFG.league==="ALL"||c.lg===CFG.league);
+  const mkName=new Map();inLg.forEach(c=>{if(!mkName.has(c.market))mkName.set(c.market,c.short||c.label)});
+  const GB=["ml","spread","total"],sk=m=>(GB.includes(m)?"0":"1")+mkName.get(m).toLowerCase();
+  const mk=[...mkName.keys()].sort((a,b)=>sk(a).localeCompare(sk(b)));
+  MARKETS=new Set([...MARKETS].filter(m=>mk.includes(m)));
+  $("mkpills").innerHTML=mk.map(m=>`<button type="button" data-mk="${esc(m)}" aria-pressed="${MARKETS.has(m)}">${esc(mkName.get(m))}</button>`).join("");
+  const gm=new Map();inLg.forEach(c=>gm.set(c.gk,c));
+  const gl=[...gm.values()].sort((a,b)=>a.t-b.t);
+  $("gmpills").innerHTML=gl.map(c=>`<button type="button" data-gk="${esc(c.gk)}" aria-pressed="${!GAMES_OFF.has(c.gk)}">${esc(c.gl)} · ${esc(c.t.toLocaleDateString("en-US",{weekday:"short"}))}</button>`).join("");
+}
+function updateChips(){
+  const n=eligible([]).length;
+  $("chips").innerHTML=(LINES&&LINES.fetched?`<span class="chip">DK lines <b>${new Date(LINES.fetched).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</b></span>`:"")+`<span class="chip"><b>${n}</b> bets in pool</span>`;
+}
+function wire(){
+  $("dec").onclick=()=>{CFG.n=Math.max(2,CFG.n-1);saveCfg();syncControls()};
+  $("inc").onclick=()=>{CFG.n=Math.min(10,CFG.n+1);saveCfg();syncControls()};
+  $("modeseg").onclick=e=>{const b=e.target.closest("button");if(!b)return;CFG.mode=b.dataset.mode;saveCfg();syncControls();updateChips()};
+  $("kindseg").onclick=e=>{const b=e.target.closest("button");if(!b)return;CFG.kind=b.dataset.kind;saveCfg();syncControls();updateChips()};
+  $("lgseg").onclick=e=>{const b=e.target.closest("button");if(!b)return;CFG.league=b.dataset.lg;saveCfg();LEGS=[];MARKETS.clear();GAMES_OFF.clear();syncControls();buildPills();updateChips();render()};
+  $("onegame").onchange=e=>{CFG.onegame=e.target.checked;saveCfg();updateChips()};
+  $("nocaution").onchange=e=>{CFG.nocaution=e.target.checked;saveCfg();updateChips()};
+  $("minhit").onchange=e=>{CFG.minhit=parseFloat(e.target.value)||0;saveCfg()};
+  $("mkpills").onclick=e=>{const b=e.target.closest("button");if(!b)return;const m=b.dataset.mk;MARKETS.has(m)?MARKETS.delete(m):MARKETS.add(m);b.setAttribute("aria-pressed",MARKETS.has(m));updateChips()};
+  $("gmpills").onclick=e=>{const b=e.target.closest("button");if(!b)return;const k=b.dataset.gk;GAMES_OFF.has(k)?GAMES_OFF.delete(k):GAMES_OFF.add(k);b.setAttribute("aria-pressed",!GAMES_OFF.has(k));updateChips()};
+  $("roll").onclick=rollAll;
+  $("saved").addEventListener("click",e=>{
+    const c=e.target.closest("[data-svcopy]"),d=e.target.closest("[data-svdel]");
+    if(c){const s=SAVED.find(x=>x.id===c.dataset.svcopy);if(s)copyRaw(s.text);return}
+    if(d){SAVED=SAVED.filter(x=>x.id!==d.dataset.svdel);persistSaved();renderSaved()}
+  });
+  $("result").addEventListener("click",e=>{
+    const a=e.target.closest("[data-act]");
+    if(a){const i=+a.dataset.i;if(a.dataset.act==="lock"){LEGS[i].locked=!LEGS[i].locked;render(false)}else rerollOne(i);return}
+    if(e.target.id==="savep")return saveParlay();
+    if(e.target.id==="copy")return copyText();
+  });
+  $("result").addEventListener("input",e=>{
+    if(e.target.id==="stake"||e.target.id==="codds"){
+      if(e.target.id==="stake")CFG.stake=e.target.value;else CUSTOM_ODDS=e.target.value;
+      saveCfg();
+      const pos=e.target.selectionStart,id=e.target.id;render(false);
+      const el=$(id);el.focus();try{el.setSelectionRange(pos,pos)}catch(_){}
+    }
+  });
+}
+
+/* ---------- saved parlays (kept on this device) / clipboard ---------- */
+let SAVED=[];try{SAVED=JSON.parse(localStorage.getItem("prSaved")||"[]")}catch(e){SAVED=[]}
+const persistSaved=()=>{try{localStorage.setItem("prSaved",JSON.stringify(SAVED))}catch(e){toast("Couldn't save on this device")}};
+function saveParlay(){
+  if(!LEGS.length)return;
+  const e=legEst();
+  SAVED.unshift({id:Date.now().toString(36),added:new Date().toISOString(),n:LEGS.length,odds:e.custom?(parseFloat(CUSTOM_ODDS)>0?"+":"")+parseFloat(CUSTOM_ODDS):decToAm(e.dec),text:parlayText()});
+  SAVED=SAVED.slice(0,30);persistSaved();renderSaved();toast("Parlay saved");
+}
+function renderSaved(){
+  const el=$("saved");
+  if(!SAVED.length){el.innerHTML="";return}
+  el.innerHTML=`<h2 class="sh">Saved parlays</h2>`+SAVED.map(s=>`<details class="sv"><summary><b>${s.n}-leg</b> <span class="mono">${esc(s.odds)}</span> <span class="when">${esc(new Date(s.added).toLocaleDateString("en-US",{month:"short",day:"numeric"}))}</span></summary><pre>${esc(s.text)}</pre><div class="svb"><button type="button" data-svcopy="${s.id}">Copy</button><button type="button" data-svdel="${s.id}">Delete</button></div></details>`).join("");
+}
+function parlayText(){
+  const e=legEst();
+  return`${LEGS.length}-leg parlay (${e.custom?"":"est. "}${e.custom?(parseFloat(CUSTOM_ODDS)>0?"+":"")+parseFloat(CUSTOM_ODDS):decToAm(e.dec)})\n`+LEGS.map(l=>{const c=l.c;
+    if(c.kind==="game")return`• ${c.market==="total"?`${c.gl} ${l.side==="over"?"Over":"Under"} ${fmt(c.line)}`:`${c.name} ${c.market==="ml"?"ML":""} ${c.market==="spread"?sgn(c.line):""}`.replace(/\s+/g," ").trim()}${c.price!=null?` (${sgn(c.price)})`:""} [${c.lg}, ${c.gl}, ${when(c.t)}]`;
+    return`• ${c.name} ${l.side==="over"?"Over":"Under"} ${fmt(c.line)} ${c.short||c.label} [${c.lg}, ${c.team} ${c.home?"vs":"@"} ${c.opp}, ${when(c.t)}]`}).join("\n");
+}
+function copyText(){copyRaw(parlayText())}
+function copyRaw(txt){
+  const done=()=>toast("Parlay copied");
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,()=>fallbackCopy(txt,done))}else fallbackCopy(txt,done);
+}
+function fallbackCopy(txt,done){
+  const ta=document.createElement("textarea");ta.value=txt;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();
+  try{document.execCommand("copy");done()}catch(e){toast("Couldn't copy")}ta.remove();
+}
+
+/* ---------- load ---------- */
+(async function init(){
+  const [raw,lines,picks,notes,extra]=await Promise.all([jget("props_data.json"),jget("lines.json"),jget("picks.json"),jget("notes.json"),jget("extra_lines.json")]);
+  const status=$("status");
+  if(!(raw&&lines)&&!extra){status.innerHTML="<b>Couldn't load the data</b>Reload the page to try again.";return}
+  LINES=lines||extra;NOTES=(notes&&notes.notes)||{};
+  const built=[];
+  if(raw&&lines){
+    for(const lg of ["NFL","NBA"]){if(raw[lg]&&lines[lg]&&Object.keys(lines[lg]).length)built.push(...buildPool(lg,raw[lg],lines[lg]))}
+    if(lines.CFB&&Object.keys(lines.CFB).length){
+      const cfb=await jget("cfb_data.json");
+      if(cfb)built.push(...buildPool("CFB",cfb,lines.CFB));
+    }
+  }
+  if(extra){
+    for(const [k,v] of Object.entries(extra.leagues||{}))LGNAME[k]=v.name||k;
+    built.push(...buildExtra(extra));
+  }
+  POOL=built;
+  POOL.forEach(c=>{c.note=NOTES[c.key]||null});
+  if(picks){
+    const all=[...(picks.picks||[]),...Object.values(picks.byMarket||{}).flat()];
+    all.forEach(p=>{if(!PICKMAP.has(p.key))PICKMAP.set(p.key,{side:p.side,score:p.score||0})});
+  }
+  if(!POOL.length){
+    status.innerHTML="<b>No lines posted yet</b>There are no upcoming games with DraftKings lines right now. Check back closer to kickoff.";
+    $("srcnote").textContent="Lines refresh every few hours when games are on the board.";
+    return;
+  }
+  const cnt={};POOL.forEach(c=>cnt[c.lg]=(cnt[c.lg]||0)+1);
+  const lgs=Object.keys(cnt).sort((a,b)=>{const pa=LGFIRST.indexOf(a),pb=LGFIRST.indexOf(b);return(pa<0?99:pa)-(pb<0?99:pb)||cnt[b]-cnt[a]});
+  if(lgs.length>1){
+    $("lgseg").innerHTML=["ALL",...lgs].map(l=>`<button type="button" data-lg="${l}" aria-pressed="false">${l==="ALL"?"All sports":esc(LGNAME[l]||l)}</button>`).join("");
+    if(CFG.league!=="ALL"&&!lgs.includes(CFG.league))CFG.league="ALL";
+  }else{$("lgwrap").hidden=true;CFG.league="ALL"}
+  if(CFG.mode==="top"&&!POOL.some(c=>PICKMAP.has(c.key)))CFG.mode="lean";
+  const hasGame=POOL.some(c=>c.kind==="game"),hasProp=POOL.some(c=>c.kind!=="game");
+  $("kindwrap").hidden=!(hasGame&&hasProp);if(!(hasGame&&hasProp))CFG.kind="all";
+  if(CFG.kind==="games"&&!hasGame||CFG.kind==="props"&&!hasProp)CFG.kind="all";
+  status.hidden=true;$("app").hidden=false;$("ctl").hidden=false;
+  syncControls();buildPills();updateChips();wire();renderSaved();$("nocaution").closest("label").hidden=!Object.keys(NOTES).length;
+  $("srcnote").textContent="Lines are DraftKings numbers pulled through ESPN and can move after they load. Game bets show DraftKings prices; player props have a line but no price here, so those legs count as -110 unless you enter your own odds. Check the sportsbook before betting.";
+  rollAll();
+})();
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+</body>
+</html>

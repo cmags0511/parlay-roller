@@ -1,0 +1,43 @@
+name: Update data
+
+on:
+  schedule:
+    # Every 3 hours (times are UTC)
+    - cron: "17 */3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas pyarrow
+      # lines first: build_data keeps every player who has a DraftKings line posted
+      - name: DraftKings player props for NFL, NBA and college football (ESPN)
+        run: python fetch_lines.py lines.json
+        continue-on-error: true
+      - name: Game bets and props for every other sport (ESPN)
+        run: python fetch_extra.py extra_lines.json
+        continue-on-error: true
+      - name: NFL and NBA game logs and schedules
+        run: python build_data.py props_data.json
+      - name: College football game logs (ESPN box scores)
+        run: python build_cfb.py cfb_data.json
+        continue-on-error: true
+      - name: Rank top picks
+        run: python picks.py picks.json
+        continue-on-error: true
+      - name: Commit if changed
+        run: |
+          git config user.name "parlay-roller-bot"
+          git config user.email "parlay-roller-bot@users.noreply.github.com"
+          git add props_data.json $(ls lines.json picks.json cfb_data.json cfb_games.json.gz extra_lines.json extra_athletes.json 2>/dev/null)
+          git diff --cached --quiet || git commit -m "Update data $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git pull --rebase -X theirs origin main || true
+          git push
