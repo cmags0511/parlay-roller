@@ -1,5 +1,5 @@
 // Parlay Roller service worker: works offline, data is always fetched fresh when online.
-const VERSION = "pr-v1";
+const VERSION = "pr-v2";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
 const FRESH = ["props_data.json", "lines.json", "extra_lines.json", "cfb_data.json"];
 
