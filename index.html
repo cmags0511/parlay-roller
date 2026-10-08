@@ -261,7 +261,7 @@ const sideRate=(c,s)=>c.hist?sideHits(c,s)/c.n10:null;
 const legDec=l=>l.c.price!=null?amToDec(l.c.price):LEGDEC;
 
 /* ---------- bets from other sports (extra_lines.json) ---------- */
-function buildExtra(extra){
+function buildExtra(extra,H){
   const out=[],now=Date.now();
   const pair=(a,b)=>{const ia=impl(a),ib=impl(b);if(ia==null||ib==null)return[.5,.5];const s=ia+ib;return[ia/s,ib/s]};
   for(const [lg,L] of Object.entries(extra.leagues||{})){
@@ -280,8 +280,15 @@ function buildExtra(extra){
     for(const r of L.props||[]){
       const t=new Date(r.t);if(!r.away||!r.home||!(t.getTime()>now)||typeof r.line!=="number")continue;
       const home=r.team===r.home,mk="x:"+r.label.toLowerCase();
-      out.push({kind:"xprop",hist:false,sport:L.sport||"other",key:`${lg}|${r.aid}|${mk}`,xk:`${lg}|${r.aid}`,lg,pid:r.aid,name:r.name,team:r.team||"",pos:r.pos,opp:home?r.away:r.home,home,t,
-        gk:gameKey(lg,r.away,r.home,t),gl:`${r.away} @ ${r.home}`,market:mk,label:r.label,short:r.label,line:r.line,open:r.open,pOver:.5,n10:0,over10:0,under10:0,avg10:null,price:null,leagueName:L.name});
+      // recent games (newest first) from extra_history.json, when ESPN's game log covers this stat
+      const vals=(((H.players||{})[`${lg}|${r.aid}`]||{}).v||{})[r.label],ok=Array.isArray(vals)&&vals.length>=6;
+      let pOver=.5,n10=0,over10=0,under10=0,avg10=null;
+      if(ok){
+        const line=r.line,l10=vals.slice(0,10),l5=vals.slice(0,5),sh=a=>(a.filter(v=>v>line).length+1)/(a.length+2);
+        pOver=.45*sh(l10)+.35*sh(vals)+.2*sh(l5);n10=l10.length;over10=l10.filter(v=>v>line).length;under10=l10.filter(v=>v<line).length;avg10=l10.reduce((a,b)=>a+b,0)/l10.length;
+      }
+      out.push({kind:"xprop",hist:ok,sport:L.sport||"other",key:`${lg}|${r.aid}|${mk}`,xk:`${lg}|${r.aid}`,lg,pid:r.aid,name:r.name,team:r.team||"",pos:r.pos,opp:home?r.away:r.home,home,t,
+        gk:gameKey(lg,r.away,r.home,t),gl:`${r.away} @ ${r.home}`,market:mk,label:r.label,short:r.label,line:r.line,open:r.open,pOver,n10,over10,under10,avg10,price:null,leagueName:L.name});
     }
   }
   return out;
@@ -523,7 +530,7 @@ function fallbackCopy(txt,done){
 
 /* ---------- load ---------- */
 (async function init(){
-  const [raw,lines,extra]=await Promise.all([jget("props_data.json"),jget("lines.json"),jget("extra_lines.json")]);
+  const [raw,lines,extra,xhist]=await Promise.all([jget("props_data.json"),jget("lines.json"),jget("extra_lines.json"),jget("extra_history.json")]);
   const status=$("status");
   if(!(raw&&lines)&&!extra){status.innerHTML="<b>Couldn't load the data</b>Reload the page to try again.";return}
   LINES=lines||extra;
@@ -537,7 +544,7 @@ function fallbackCopy(txt,done){
   }
   if(extra){
     for(const [k,v] of Object.entries(extra.leagues||{}))LGNAME[k]=v.name||k;
-    built.push(...buildExtra(extra));
+    built.push(...buildExtra(extra,xhist||{}));
   }
   POOL=built;
   if(!POOL.length){

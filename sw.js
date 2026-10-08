@@ -1,7 +1,7 @@
 // Parlay Roller service worker: works offline, data is always fetched fresh when online.
-const VERSION = "pr-v2";
+const VERSION = "pr-v3";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
-const FRESH = ["props_data.json", "lines.json", "extra_lines.json", "cfb_data.json"];
+const FRESH = ["props_data.json", "lines.json", "extra_lines.json", "extra_history.json", "cfb_data.json"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

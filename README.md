@@ -14,6 +14,7 @@ Not covered: golf and racing outrights (no head-to-head matchup in ESPN's feed) 
 | Script | Writes | What |
 | --- | --- | --- |
 | `fetch_lines.py` | `lines.json` | DK player props for NFL, NBA, college football |
+| `fetch_history.py` | `extra_history.json` | Recent ESPN game logs for MLB / NHL / WNBA players with props, turned into the stat each prop is about (hits, strikeouts, points…). Soccer props (shots by foot or header) have no game-log equivalent |
 | `fetch_extra.py` | `extra_lines.json`, `extra_athletes.json`, `extra_leagues.json` | DK game bets for every sport and props for other sports; remembers quiet leagues so it skips them for a while |
 | `build_data.py` | `props_data.json` | NFL and NBA game logs and schedules (nflverse, sportsdataverse) |
 | `build_cfb.py` | `cfb_data.json`, `cfb_games.json.gz` | College football box scores |
